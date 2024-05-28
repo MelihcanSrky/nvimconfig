@@ -2,32 +2,37 @@ vim.cmd("language en_US")
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
-  vim.fn.system({
-    "git",
-    "clone",
-    "--filter=blob:none",
-    "https://github.com/folke/lazy.nvim.git",
-    "--branch=stable", -- latest stable release
-    lazypath,
-  })
+    vim.fn.system({
+        "git",
+        "clone",
+        "--filter=blob:none",
+        "https://github.com/folke/lazy.nvim.git",
+        "--branch=stable", -- latest stable release
+        lazypath,
+    })
 end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
     -- colorscheme
-    { 
-        "ellisonleao/gruvbox.nvim", 
+    {
+        'comfysage/evergarden',
+        lazy = false,
         priority = 1000,
-        config = function ()
-            require("gruvbox").setup({
-                contrast = "hard"
+        opts = {
+            transparent_background = false,
+            contrast_dark = 'medium'
+        },
+        config = function()
+            require("evergarden").setup({
             })
-            vim.cmd([[colorscheme gruvbox]])
+            vim.cmd([[colorscheme evergarden]])
         end,
     },
     {
-        'nvim-telescope/telescope.nvim', tag = '0.1.6',
-        dependencies = {'nvim-lua/plenary.nvim'},
+        'nvim-telescope/telescope.nvim',
+        tag = '0.1.6',
+        dependencies = { 'nvim-lua/plenary.nvim', "nvim-tree/nvim-web-devicons", },
         config = function()
             require('telescope').setup({
 
@@ -44,11 +49,11 @@ require("lazy").setup({
         end,
         config = function()
             require('nvim-treesitter.configs').setup({
-                ensure_installed = {"go", "svelte", "javascript", "typescript", "c", "lua", "vim", "vimdoc", "query"},
+                ensure_installed = { "vue", "go", "svelte", "javascript", "typescript", "c", "lua", "vim", "vimdoc", "query" },
                 sync_install = false,
                 auto_install = true,
-                autopairs = {enable = true},
-                highlight = {enable = true}
+                autopairs = { enable = true },
+                highlight = { enable = true }
             })
         end
     },
@@ -71,7 +76,7 @@ require("lazy").setup({
         'hrsh7th/nvim-cmp',
         event = 'InsertEnter',
         dependencies = {
-            {'L3MON4D3/LuaSnip'},
+            { 'L3MON4D3/LuaSnip' },
         },
         config = function()
             local lsp_zero = require('lsp-zero')
@@ -81,13 +86,14 @@ require("lazy").setup({
             local cmp_action = lsp_zero.cmp_action()
 
             cmp.setup({
-                formatting = lsp_zero.cmp_format({details = true}),
+                formatting = lsp_zero.cmp_format({ details = true }),
                 mapping = cmp.mapping.preset.insert({
                     ['<C-Space>'] = cmp.mapping.complete(),
                     ['<C-u>'] = cmp.mapping.scroll_docs(-4),
                     ['<C-d>'] = cmp.mapping.scroll_docs(4),
                     ['<C-f>'] = cmp_action.luasnip_jump_forward(),
                     ['<C-b>'] = cmp_action.luasnip_jump_backward(),
+                    ['<CR>'] = cmp.mapping.confirm { select = true }
                 }),
                 snippet = {
                     expand = function(args)
@@ -100,21 +106,20 @@ require("lazy").setup({
     {
         'neovim/nvim-lspconfig',
         cmd = 'LspInfo',
-        event = {'BufReadPre', 'BufNewFile'},
+        event = { 'BufReadPre', 'BufNewFile' },
         dependencies = {
-            {'hrsh7th/cmp-nvim-lsp'},
-            {'williamboman/mason-lspconfig.nvim'},
+            { 'hrsh7th/cmp-nvim-lsp' },
+            { 'williamboman/mason-lspconfig.nvim' },
         },
         config = function()
             local lsp_zero = require('lsp-zero')
             lsp_zero.extend_lspconfig()
 
             lsp_zero.on_attach(function(client, bufnr)
-                local opts = {buffer = bufnr, remap = false}
+                local opts = { buffer = bufnr, remap = false }
 
                 vim.keymap.set('n', 'gd', "<cmd>lua vim.lsp.buf.definition()<CR>", opts)
-                vim.keymap.set('n', '<leader>vs', "<cmd>vsplit | lua vim.lsp.buf.definition()<CR>", opts)
-                vim.keymap.set('n', '<leader>bs', "<cmd>belowright split | lua vim.lsp.buf.definition()<CR>", opts)
+
 
                 vim.keymap.set('n', '[d', function() vim.diagnostic.goto_next() end, opts)
                 vim.keymap.set('n', ']d', function() vim.diagnostic.goto_prev() end, opts)
@@ -124,11 +129,11 @@ require("lazy").setup({
                 vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
                 vim.keymap.set('n', '<leader>cl', vim.lsp.codelens.run, opts)
                 vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
-                vim.keymap.set({'n', 'v'}, '<leader>vca', vim.lsp.buf.code_action, opts)
+                vim.keymap.set({ 'n', 'v' }, '<leader>vca', vim.lsp.buf.code_action, opts)
             end)
 
             require('mason-lspconfig').setup({
-                ensure_installed = {"tsserver", "gopls", "svelte"},
+                ensure_installed = { "tsserver", "gopls", "svelte", "volar" },
                 handlers = {
                     function(server_name)
                         require('lspconfig')[server_name].setup({})
@@ -140,11 +145,129 @@ require("lazy").setup({
                     end,
                 }
             })
+
+            require('lspconfig').svelte.setup {
+                filetypes = { "svelte" },
+                on_attach = function(client, bufnr)
+                    if client.name == 'svelte' then
+                        vim.api.nvim_create_autocmd("BufWritePost", {
+                            pattern = { "*.js", "*.ts", "*.svelte" },
+                            callback = function(ctx)
+                                client.notify("$/onDidChangeTsOrJsFile", { uri = ctx.file })
+                            end,
+                        })
+                    end
+                    if vim.bo[bufnr].filetype == "svelte" then
+                        vim.api.nvim_create_autocmd("BufWritePost", {
+                            pattern = { "*.js", "*.ts", "*.svelte" },
+                            callback = function(ctx)
+                                client.notify("$/onDidChangeTsOrJsFile", { uri = ctx.file })
+                            end,
+                        })
+                    end
+                end
+            }
         end
-    }
+    },
+    {
+        'windwp/nvim-autopairs',
+        config = function()
+            require("nvim-autopairs").setup {
+                check_ts = true
+            }
+        end
+    },
+    {
+        'nvim-lualine/lualine.nvim',
+        dependencies = { 'nvim-tree/nvim-web-devicons' },
+        config = function()
+            require('lualine').setup {
+                options = {
+                    icons_enabled = true,
+                    theme = 'evergarden',
+                    sections = {
+                        lualine_c = {
+                            'filename',
+                            file_status = true,
+                            path = 2
+                        }
+                    }
+                }
+            }
+        end
+    },
+    {
+        "fatih/vim-go",
+        config = function()
+            -- vim.g['go_gopls_enabled'] = 0
+            -- vim.g['go_code_completion_enabled'] = 0
+            -- vim.g['go_fmt_autosave'] = 0
+            -- vim.g['go_imports_autosave'] = 0
+            -- vim.g['go_mod_fmt_autosave'] = 0
+            -- vim.g['go_doc_keywordprg_enabled'] = 0
+            -- vim.g['go_def_mapping_enabled'] = 0
+            -- vim.g['go_textobj_enabled'] = 0
+            -- vim.g['go_list_type'] = 'quickfix'
+        end,
+    },
+    {
+        "numToStr/Comment.nvim",
+        config = function()
+            require('Comment').setup({
+                opleader = {
+                    ---Block-comment keymap
+                    block = '<Nop>',
+                },
+            })
+        end
+    },
+    {
+        'akinsho/bufferline.nvim',
+        version = "*",
+        dependencies = 'nvim-tree/nvim-web-devicons',
+        config = function()
+            require("bufferline").setup {}
+        end
+    },
+    {
+        "elentok/format-on-save.nvim",
+        config = function()
+            local formatters = require("format-on-save.formatters")
+            require("format-on-save").setup({
+                exclude_path_patterns = {
+                    "/node_modules/",
+                    ".local/share/nvim/lazy",
+                },
+                formatter_by_ft = {
+                    css = formatters.lsp,
+                    html = formatters.lsp,
+                    java = formatters.lsp,
+                    svelte = formatters.lsp,
+                    json = formatters.lsp,
+                    lua = formatters.lsp,
+                    markdown = formatters.prettierd,
+                    javascript = formatters.lsp,
+                    openscad = formatters.lsp,
+                    python = formatters.lsp,
+                    rust = formatters.lsp,
+                    scad = formatters.lsp,
+                    scss = formatters.lsp,
+                    sh = formatters.lsp,
+                    terraform = formatters.lsp,
+                    typescript = formatters.lsp,
+                    typescriptreact = formatters.prettierd,
+                    -- Optional: fallback formatter to use when no formatters match the current filetype
+                    fallback_formatter = {
+                        formatters.remove_trailing_whitespace,
+                        formatters.remove_trailing_newlines,
+                        formatters.prettierd,
+                    }
+                },
+                -- run_with_sh = false,
+            })
+        end
+    },
 })
-
-
 
 ------------
 --Settings--
@@ -177,13 +300,25 @@ vim.opt.colorcolumn = "80"
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
 
+vim.keymap.set('n', '<leader>vs', "<cmd>vsplit<CR>")
+vim.keymap.set('n', '<leader>hs', "<cmd>split<CR>")
+
+vim.keymap.set("x", "<leader>p", "\"_dP")
+vim.keymap.set("t", "<F12>", "<C-\\><C-n>")
 -- ColorScheme --
-vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
-vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
+-- vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
+-- vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
 
 -- Telescope --
 local builtin = require('telescope.builtin')
 vim.keymap.set('n', '<leader>pf', builtin.find_files, {})
+vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
 vim.keymap.set('n', '<leader>ps', function()
-	builtin.grep_string({ search = vim.fn.input("Grep > ") })
+    builtin.grep_string({ search = vim.fn.input("Grep > ") })
 end)
+
+-- BufferLine --
+vim.keymap.set('n', '<leader>mm', '<CMD>BufferLinePick<CR>')
+vim.keymap.set('n', '<leader>mn', '<CMD>BufferLineCycleNext<CR>')
+vim.keymap.set('n', '<leader>mp', '<CMD>BufferLineCyclePrev<CR>')
+vim.keymap.set('n', '<leader>cp', '<CMD>BufferLinePickClose<CR>')
