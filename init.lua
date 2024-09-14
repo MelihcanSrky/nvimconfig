@@ -35,12 +35,14 @@ require("lazy").setup({
         dependencies = { 'nvim-lua/plenary.nvim', "nvim-tree/nvim-web-devicons", },
         config = function()
             require('telescope').setup({
-
             })
         end
     },
     {
         'nvim-treesitter/nvim-treesitter',
+        dependencies = {
+            { "windwp/nvim-ts-autotag" }
+        },
         version = false,
         build = ":TSUpdate",
         init = function(plugin)
@@ -49,11 +51,24 @@ require("lazy").setup({
         end,
         config = function()
             require('nvim-treesitter.configs').setup({
-                ensure_installed = { "vue", "go", "svelte", "javascript", "typescript", "c", "lua", "vim", "vimdoc", "query" },
+                ensure_installed = { "vue", "go", "svelte", "angular", "javascript", "typescript", "c", "lua", "vim", "vimdoc", "query" },
                 sync_install = false,
                 auto_install = true,
                 autopairs = { enable = true },
                 highlight = { enable = true }
+            })
+            require('nvim-ts-autotag').setup({
+                opts = {
+                    -- Defaults
+                    enable_close = true,          -- Auto close tags
+                    enable_rename = true,         -- Auto rename pairs of tags
+                    enable_close_on_slash = false -- Auto close on trailing </
+                },
+                per_filetype = {
+                    ["html"] = {
+                        enable_close = true
+                    }
+                }
             })
         end
     },
@@ -76,7 +91,16 @@ require("lazy").setup({
         'hrsh7th/nvim-cmp',
         event = 'InsertEnter',
         dependencies = {
-            { 'L3MON4D3/LuaSnip' },
+            {
+                'L3MON4D3/LuaSnip',
+                dependencies = {
+                    "rafamadriz/friendly-snippets",
+                },
+                config = function()
+                    require("luasnip/loaders/from_vscode").lazy_load()
+                    require("luasnip").filetype_extend("typescriptreact", { "react" })
+                end
+            },
         },
         config = function()
             local lsp_zero = require('lsp-zero')
@@ -85,8 +109,12 @@ require("lazy").setup({
             local cmp = require('cmp')
             local cmp_action = lsp_zero.cmp_action()
 
+            local luasnip = require('luasnip')
+
+            -- Load friendly-snippets
+
             cmp.setup({
-                formatting = lsp_zero.cmp_format({ details = true }),
+                formatting = lsp_zero.cmp_format({ details = true, maxWidth = 80 }),
                 mapping = cmp.mapping.preset.insert({
                     ['<C-Space>'] = cmp.mapping.complete(),
                     ['<C-u>'] = cmp.mapping.scroll_docs(-4),
@@ -97,7 +125,7 @@ require("lazy").setup({
                 }),
                 snippet = {
                     expand = function(args)
-                        require('luasnip').lsp_expand(args.body)
+                        luasnip.lsp_expand(args.body)
                     end,
                 },
             })
@@ -107,6 +135,11 @@ require("lazy").setup({
         'neovim/nvim-lspconfig',
         cmd = 'LspInfo',
         event = { 'BufReadPre', 'BufNewFile' },
+        opts = {
+            servers = {
+                tailwindcss = {},
+            },
+        },
         dependencies = {
             { 'hrsh7th/cmp-nvim-lsp' },
             { 'williamboman/mason-lspconfig.nvim' },
@@ -133,7 +166,7 @@ require("lazy").setup({
             end)
 
             require('mason-lspconfig').setup({
-                ensure_installed = { "tsserver", "gopls", "svelte", "volar" },
+                ensure_installed = { "tsserver", "gopls", "svelte", "volar", "angularls" },
                 handlers = {
                     function(server_name)
                         require('lspconfig')[server_name].setup({})
@@ -168,6 +201,21 @@ require("lazy").setup({
                 end
             }
         end
+    },
+    {
+        "nvim-tree/nvim-tree.lua",
+        version = "*",
+        lazy = false,
+        dependencies = {
+            "nvim-tree/nvim-web-devicons",
+        },
+        config = function()
+            require("nvim-tree").setup {
+                view = {
+                    width = 30
+                }
+            }
+        end,
     },
     {
         'windwp/nvim-autopairs',
@@ -230,6 +278,14 @@ require("lazy").setup({
         end
     },
     {
+        'NvChad/nvim-colorizer.lua',
+        opts = {
+            user_default_options = {
+                tailwind = true,
+            },
+        },
+    },
+    {
         "elentok/format-on-save.nvim",
         config = function()
             local formatters = require("format-on-save.formatters")
@@ -255,7 +311,7 @@ require("lazy").setup({
                     sh = formatters.lsp,
                     terraform = formatters.lsp,
                     typescript = formatters.lsp,
-                    typescriptreact = formatters.prettierd,
+                    typescriptreact = formatters.lsp,
                     -- Optional: fallback formatter to use when no formatters match the current filetype
                     fallback_formatter = {
                         formatters.remove_trailing_whitespace,
@@ -276,6 +332,7 @@ require("lazy").setup({
 
 vim.g.mapleader = " "
 vim.keymap.set("n", "<leader>pv", vim.cmd.Ex)
+vim.keymap.set("n", "<leader>bd", ":bd<CR>")
 
 vim.opt.modelines = 0
 
@@ -299,6 +356,8 @@ vim.opt.colorcolumn = "80"
 -- Keymap --
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
+
+vim.keymap.set("n", "<A-1>", ":NvimTreeToggle<CR>")
 
 vim.keymap.set('n', '<leader>vs', "<cmd>vsplit<CR>")
 vim.keymap.set('n', '<leader>hs', "<cmd>split<CR>")
