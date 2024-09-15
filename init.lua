@@ -323,6 +323,14 @@ require("lazy").setup({
             })
         end
     },
+    {
+        {
+            "tiagovla/scope.nvim",
+            config = function()
+                require("scope").setup({})
+            end
+        }
+    }
 })
 
 ------------
@@ -381,3 +389,5 @@ vim.keymap.set('n', '<leader>mm', '<CMD>BufferLinePick<CR>')
 vim.keymap.set('n', '<leader>mn', '<CMD>BufferLineCycleNext<CR>')
 vim.keymap.set('n', '<leader>mp', '<CMD>BufferLineCyclePrev<CR>')
 vim.keymap.set('n', '<leader>cp', '<CMD>BufferLinePickClose<CR>')
+vim.keymap.set('n', '<leader>tn', ':tabnext<CR>')
+vim.keymap.set('n', '<leader>tp', ':tabprevious<CR>')
