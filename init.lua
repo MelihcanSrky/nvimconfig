@@ -157,13 +157,13 @@ require("lazy").setup({
                 vim.keymap.set('n', '[d', function() vim.diagnostic.goto_next() end, opts)
                 vim.keymap.set('n', ']d', function() vim.diagnostic.goto_prev() end, opts)
                 vim.keymap.set('n', '<leader>e', function() vim.diagnostic.open_float() end, opts)
+                vim.keymap.set({ 'n', 'v' }, '<leader>ca', function() vim.lsp.buf.code_action() end, opts)
                 vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
                 vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
                 vim.keymap.set('n', 'H', vim.lsp.buf.hover, opts)
                 vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
                 vim.keymap.set('n', '<leader>cl', vim.lsp.codelens.run, opts)
                 vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
-                vim.keymap.set({ 'n', 'v' }, '<leader>vca', vim.lsp.buf.code_action, opts)
             end)
 
             require('mason-lspconfig').setup({
