@@ -39,11 +39,7 @@ require("lazy").setup({
         end
     },
     {
-        'nvim-treesitter/nvim-treesitter',
-        dependencies = {
-            { "windwp/nvim-ts-autotag" }
-        },
-        version = false,
+        "nvim-treesitter/nvim-treesitter",
         build = ":TSUpdate",
         init = function(plugin)
             require("lazy.core.loader").add_to_rtp(plugin)
@@ -51,23 +47,37 @@ require("lazy").setup({
         end,
         config = function()
             require('nvim-treesitter.configs').setup({
-                ensure_installed = { "vue", "go", "svelte", "angular", "javascript", "typescript", "c", "lua", "vim", "vimdoc", "query" },
+                ensure_installed = { "html", "cpp", "vue", "go", "svelte", "angular", "javascript", "typescript", "c", "lua", "vim", "vimdoc", "query" },
                 sync_install = false,
                 auto_install = true,
-                autopairs = { enable = true },
                 highlight = { enable = true }
             })
+        end
+    },
+
+    -- Autotag
+    {
+        "windwp/nvim-ts-autotag",
+        dependencies = "nvim-treesitter/nvim-treesitter",
+        config = function()
             require('nvim-ts-autotag').setup({
-                opts = {
-                    -- Defaults
-                    enable_close = true,          -- Auto close tags
-                    enable_rename = true,         -- Auto rename pairs of tags
-                    enable_close_on_slash = false -- Auto close on trailing </
-                },
-                per_filetype = {
-                    ["html"] = {
-                        enable_close = true
-                    }
+                enable = true,
+                filetypes = { "html", "xml", "vue", "svelte", "jsx", "tsx" },
+            })
+        end
+    },
+
+    -- Autopairs
+    {
+        "windwp/nvim-autopairs",
+        dependencies = "nvim-treesitter/nvim-treesitter",
+        config = function()
+            require('nvim-autopairs').setup({
+                check_ts = true,
+                ts_config = {
+                    lua = {'string'},
+                    javascript = {'template_string'},
+                    html = {'string'},
                 }
             })
         end
@@ -143,6 +153,7 @@ require("lazy").setup({
         dependencies = {
             { 'hrsh7th/cmp-nvim-lsp' },
             { 'williamboman/mason-lspconfig.nvim' },
+            { "WhoIsSethDaniel/mason-tool-installer.nvim"}
         },
         config = function()
             local lsp_zero = require('lsp-zero')
@@ -166,8 +177,17 @@ require("lazy").setup({
                 vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
             end)
 
+            require("mason").setup()
+
+            require('lspconfig').clangd.setup{
+                cmd = {'clangd', '--background-index', '--clang-tidy', '--log=verbose'},
+                init_options = {
+                    fallbackFlags = { '-std=c++17' },
+                },
+            }
+
             require('mason-lspconfig').setup({
-                ensure_installed = { "tsserver", "gopls", "svelte", "volar", "angularls" },
+                ensure_installed = { "clangd", "html", "ts_ls", "gopls", "svelte", "volar", "angularls" },
                 handlers = {
                     function(server_name)
                         require('lspconfig')[server_name].setup({})
@@ -179,28 +199,6 @@ require("lazy").setup({
                     end,
                 }
             })
-
-            require('lspconfig').svelte.setup {
-                filetypes = { "svelte" },
-                on_attach = function(client, bufnr)
-                    if client.name == 'svelte' then
-                        vim.api.nvim_create_autocmd("BufWritePost", {
-                            pattern = { "*.js", "*.ts", "*.svelte" },
-                            callback = function(ctx)
-                                client.notify("$/onDidChangeTsOrJsFile", { uri = ctx.file })
-                            end,
-                        })
-                    end
-                    if vim.bo[bufnr].filetype == "svelte" then
-                        vim.api.nvim_create_autocmd("BufWritePost", {
-                            pattern = { "*.js", "*.ts", "*.svelte" },
-                            callback = function(ctx)
-                                client.notify("$/onDidChangeTsOrJsFile", { uri = ctx.file })
-                            end,
-                        })
-                    end
-                end
-            }
         end
     },
     {
@@ -222,6 +220,7 @@ require("lazy").setup({
         'windwp/nvim-autopairs',
         config = function()
             require("nvim-autopairs").setup {
+                enable_check_bracket_line = true,
                 check_ts = true
             }
         end
@@ -272,7 +271,7 @@ require("lazy").setup({
     },
     {
         'akinsho/bufferline.nvim',
-        version = "*",
+        -- version = "*",
         dependencies = 'nvim-tree/nvim-web-devicons',
         config = function()
             require("bufferline").setup {}
@@ -296,6 +295,7 @@ require("lazy").setup({
                     ".local/share/nvim/lazy",
                 },
                 formatter_by_ft = {
+                    cpp = formatters.lsp,
                     css = formatters.lsp,
                     html = formatters.lsp,
                     java = formatters.lsp,
@@ -392,3 +392,14 @@ vim.keymap.set('n', '<leader>mp', '<CMD>BufferLineCyclePrev<CR>')
 vim.keymap.set('n', '<leader>cp', '<CMD>BufferLinePickClose<CR>')
 vim.keymap.set('n', '<leader>tn', ':tabnext<CR>')
 vim.keymap.set('n', '<leader>tp', ':tabprevious<CR>')
+
+-- Autotag --
+vim.api.nvim_create_autocmd("TabNew", {
+    pattern = "*.html",
+    callback = function()
+        require('nvim-ts-autotag').setup({
+            enable = true,
+            filetypes = { "html", "xml", "vue", "svelte", "jsx", "tsx" }
+        })
+    end
+})
